@@ -1,0 +1,175 @@
+// Interrupción por flanco de bajada en PJ0 = SW1
+// La Rutina de Servicio de Interrupción incrementa a un contador.
+
+#include <stdint.h>
+#define SYSCTL_RCGCGPIO_R (*((volatile uint32_t *)0x400FE608))
+#define SYSCTL_PRGPIO_R (*((volatile unsigned long *)0x400FEA08))
+#define GPIO_PORTJ_DIR_R (*((volatile uint32_t *)0x40060400)) //Registro de Dirección PJ
+#define GPIO_PORTJ_DEN_R (*((volatile uint32_t *)0x4006051C)) //Registro de habilitación PJ
+#define GPIO_PORTJ_PUR_R (*((volatile uint32_t *)0x40060510)) //Registro de pull-up PJ
+#define GPIO_PORTJ_DATA_R (*((volatile uint32_t *)0x40060004)) //Registro de Datos J
+#define GPIO_PORTJ_IS_R (*((volatile uint32_t *)0x40060404)) //Registro de configuración de detección de nivel o flanco
+#define GPIO_PORTJ_IBE_R (*((volatile uint32_t *)0x40060408)) //Registro de configuración de interrupción por ambos flancos
+#define GPIO_PORTJ_IEV_R (*((volatile uint32_t *)0x4006040C)) //Registro de configuración de interrupción por un flanco
+#define GPIO_PORTJ_ICR_R (*((volatile uint32_t *)0x4006041C)) //Registro de limpieza de interrupcion de flanco en PJ
+#define GPIO_PORTJ_IM_R (*((volatile uint32_t *)0x40060410)) //Registro de mascara de interrupcion PJ
+#define NVIC_EN1_R (*((volatile uint32_t *)0xE000E104)) // Registro de habilitación de interrupción PJ
+#define NVIC_PRI12_R (*((volatile uint32_t *)0xE000E430))//Registro de prioridad de interrupción
+
+#define GPIO_PORTK_DIR_R (*((volatile uint32_t *)0X40061400)) //Registro de Dirección PK
+#define GPIO_PORTK_DEN_R (*((volatile uint32_t *)0X4006151C)) //Registro de habilitación PK
+#define GPIO_PORTK_PUR_R (*((volatile uint32_t *)0X40061510)) //Registro de pull-up PK
+#define GPIO_PORTK_DATA_R (*((volatile uint32_t *)0X400613FC)) //Registro de Datos K
+#define GPIO_PORTK_IS_R (*((volatile uint32_t *)0x40061404)) // Detección de nivel o flanco
+#define GPIO_PORTK_IBE_R (*((volatile uint32_t *)0x40061408)) // Interrupción por ambos flancos
+#define GPIO_PORTK_IEV_R (*((volatile uint32_t *)0x4006140C)) // Interrupción por un solo flanco
+#define GPIO_PORTK_ICR_R (*((volatile uint32_t *)0x4006141C)) // Limpieza de interrupción
+#define GPIO_PORTK_IM_R (*((volatile uint32_t *)0x40061410)) // Máscara de interrupción
+#define NVIC_EN1_R (*((volatile uint32_t *)0xE000E104)) // Registro de habilitación de interrupción
+#define NVIC_PRI13_R (*((volatile uint32_t *)0xE000E434)) // Prioridad de interrupción (Port K está en NVIC pri13)
+
+
+#define GPIO_PORTM_DIR_R (*((volatile uint32_t *)0x40063400)) //Registro de Dirección PM
+#define GPIO_PORTM_DEN_R (*((volatile uint32_t *)0x4006351C)) //Registro de habilitación PM
+#define GPIO_PORTM_PUR_R (*((volatile uint32_t *)0x40063510)) //Registro de pull-up PM
+#define GPIO_PORTM_DATA_R (*((volatile uint32_t *)0x400633FC)) //Registro de Datos M
+#define GPIO_PORTM_IS_R (*((volatile uint32_t *)0x40063404)) // Detección de nivel o flanco
+#define GPIO_PORTM_IBE_R (*((volatile uint32_t *)0x40063408)) // Interrupción por ambos flancos
+#define GPIO_PORTM_IEV_R (*((volatile uint32_t *)0x4006340C)) // Interrupción por un solo flanco
+#define GPIO_PORTM_ICR_R (*((volatile uint32_t *)0x4006341C)) // Limpieza de interrupción
+#define GPIO_PORTM_IM_R (*((volatile uint32_t *)0x40063410)) // Máscara de interrupción
+#define NVIC_EN2_R (*((volatile uint32_t *)0xE000E108)) // Registro de habilitación de interrupción (Port M en NVIC EN2)
+#define NVIC_PRI18_R (*((volatile uint32_t *)0xE000E448)) // Registro de prioridad para la interrupción 72
+
+#define GPIO_PORTN_DATA_R (*((volatile unsigned long *)0x4006400C)) // Registro de Datos Puerto N
+#define GPIO_PORTN_DIR_R (*((volatile unsigned long *)0x40064400)) // Registro de Dirección Puerto N
+#define GPIO_PORTN_DEN_R (*((volatile unsigned long *)0x4006451C)) // Registro de Habilitación Puerto N
+
+// Incrementa la variable una vez cada que se presiona SW1
+volatile uint32_t Flancosdebajada = 0;
+void EdgeCounter_Init(void){
+    SYSCTL_RCGCGPIO_R |= 0x00001B00; // (a) activa el reloj para el puerto J
+    Flancosdebajada = 0; // (b) inicializa el contador
+    GPIO_PORTJ_DIR_R &= ~0x01; // (c) PJ0 dirección entrada - boton SW1
+    GPIO_PORTJ_DEN_R |= 0x01; // PJ0 se habilita
+    GPIO_PORTJ_PUR_R |= 0x01; // habilita weak pull-up on PJ1
+    GPIO_PORTJ_IS_R &= ~0x01; // (d) PJ1 es sensible por flanco
+    GPIO_PORTJ_IBE_R &= ~0x01; // PJ1 no es sensible a dos flancos
+    GPIO_PORTJ_IEV_R &= ~0x01; // PJ1 detecta eventos de flanco de bajada
+    GPIO_PORTJ_ICR_R = 0x01; // (e) limpia la bandera 0
+    GPIO_PORTJ_IM_R |= 0x01; // (f) Se desenmascara la interrupcion PJ0 y se envia al controlador de  interrupciones
+    NVIC_PRI12_R = (NVIC_PRI12_R&0x00FFFFFF)|0x00000000; // (g) prioridad 0 (pag 159)
+    NVIC_EN1_R= 1<<(51-32); //(h) habilita la interrupción 51 en NVIC (Pag. 154)
+
+
+
+        // Configuración Puerto K (PK0)
+        GPIO_PORTK_DIR_R &= ~0x01;
+        GPIO_PORTK_DEN_R |= 0x01;
+        GPIO_PORTK_PUR_R |= 0x01;
+        GPIO_PORTK_IS_R &= ~0x01;
+        GPIO_PORTK_IBE_R &= ~0x01;
+        GPIO_PORTK_IEV_R &= ~0x01;
+        GPIO_PORTK_ICR_R = 0x01;
+        GPIO_PORTK_IM_R |= 0x01;
+        NVIC_PRI13_R = (NVIC_PRI13_R & 0xFFFFFF1F)|0x00000020;
+        NVIC_EN1_R |= 1 << (52 - 32);  // Habilitar interrupción de PK
+
+        // Configuración Puerto M (PM0)
+        GPIO_PORTM_DIR_R &= ~0x01;
+        GPIO_PORTM_DEN_R |= 0x01;
+        GPIO_PORTM_PUR_R |= 0x01;
+        GPIO_PORTM_IS_R &= ~0x01;
+        GPIO_PORTM_IBE_R &= ~0x01;
+        GPIO_PORTM_IEV_R &= ~0x01;
+        GPIO_PORTM_ICR_R = 0x01;
+        GPIO_PORTM_IM_R |= 0x01;
+        NVIC_PRI18_R = (NVIC_PRI18_R & 0xFFFF1FFF) | 0x00000040; // Prioridad 2 (bits 13-15)
+        NVIC_EN2_R |= 1 << (72 - 64);  // Habilita la interrupción 72 (Puerto M)
+
+    GPIO_PORTN_DIR_R=0x01;
+    GPIO_PORTN_DEN_R |=0x01;
+
+    }
+
+volatile int ciclo = 0; // Mueve la declaración fuera del manejador de interrupción
+
+void GPIOPortJ_Handler(void)
+{
+    GPIO_PORTJ_ICR_R = 0x01; // bandera0 de confirmación
+    Flancosdebajada = Flancosdebajada + 1;
+    int rebote;
+    int prender;
+    int apagar;
+    // Rebote (debouncing)
+    for(rebote = 0; rebote < 80000; rebote++) {
+        // Solo se ejecutará mientras no se hayan dado 5 parpadeos
+        if(ciclo < 5) {
+            // Parpadeo de 5 veces (1 parpadeo = prender y apagar)
+            GPIO_PORTN_DATA_R = 0x01; // Prende el LED
+            for(prender = 0; prender < 1000000; prender++) {} // Espera de un ciclo
+            GPIO_PORTN_DATA_R = 0x00; // Apaga el LED
+            for(apagar = 0; apagar < 1000000; apagar++) {} // Espera de un ciclo
+
+            ciclo++; // Incrementa el contador para los 5 parpadeos
+        }
+    }
+    ciclo = 0;
+}
+
+volatile int cicloK = 0; // Contador para los parpadeos del LED en el puerto K
+
+void GPIOPortK_Handler(void)
+{
+    GPIO_PORTK_ICR_R = 0x01; // Limpia la bandera de interrupción de flanco en PK0
+    int rebote;
+    int prender;
+    int apagar;
+
+    // Rebote (debouncing)
+    for(rebote = 0; rebote < 80000; rebote++) {
+        // Solo se ejecutará mientras no se hayan dado 5 parpadeos
+        if(cicloK < 5) {
+            // Parpadeo de 5 veces (1 parpadeo = prender y apagar)
+            GPIO_PORTN_DATA_R = 0x01; // Prende el LED en Puerto N
+            for(prender = 0; prender < 500000; prender++) {} // Espera de un ciclo
+            GPIO_PORTN_DATA_R = 0x00; // Apaga el LED en Puerto N
+            for(apagar = 0; apagar < 500000; apagar++) {} // Espera de un ciclo
+
+            cicloK++; // Incrementa el contador para los 5 parpadeos
+        }
+    }
+    cicloK=0;
+}
+
+volatile int cicloM = 0; // Contador para los parpadeos del LED en el puerto M
+
+void GPIOPortM_Handler(void)
+{
+    //GPIO_PORTM_ICR_R = 0x01; // Limpia la bandera de interrupción de flanco en PM0
+    int rebote;
+    int prender;
+    int apagar;
+
+    // Rebote (debouncing)
+    for(rebote = 0; rebote < 80000; rebote++) {
+        // Solo se ejecutará mientras no se hayan dado 5 parpadeos
+        if(cicloM < 5) {
+            // Parpadeo de 5 veces (1 parpadeo = prender y apagar)
+            GPIO_PORTN_DATA_R = 0x01; // Prende el LED en Puerto N
+            for(prender = 0; prender < 250000; prender++) {} // Espera de un ciclo
+            GPIO_PORTN_DATA_R = 0x00; // Apaga el LED en Puerto N
+            for(apagar = 0; apagar < 250000; apagar++) {} // Espera de un ciclo
+
+            cicloM++; // Incrementa el contador para los 5 parpadeos
+        }
+    }
+    GPIO_PORTM_ICR_R = 0x01;
+    cicloM=0;
+}
+
+//Programa principal
+int main(void){
+    EdgeCounter_Init(); // inicializa la interrupción en el puerto GPIO J
+while(1);
+}
