@@ -1,5 +1,5 @@
 ✍️ Autor
-JohnCD1906: 
+Cesareo Dolores John Brian: 
 Estudiante e ingeniero interesado en sistemas embebidos y microcontroladores.
 
 # Códigos_Tiva
