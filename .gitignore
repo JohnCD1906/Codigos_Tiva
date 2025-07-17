@@ -1,0 +1,27 @@
+# Archivos de salida de compilación
+*.out
+*.obj
+*.o
+*.d
+*.map
+*.asm
+*.hex
+*.bin
+*.lst
+*.log
+
+# Carpetas de depuración y compilación
+Debug/
+Release/
+
+# Archivos de configuración específicos de CCS
+.project
+.cproject
+.settings/
+.metadata/
+
+# Archivos temporales del sistema
+*.tmp
+*.swp
+*.bak
+*~
