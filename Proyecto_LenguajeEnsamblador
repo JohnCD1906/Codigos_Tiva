@@ -1,0 +1,217 @@
+	.global main
+.text
+
+; Definición de registros
+SYSCTL_RCGCGPIO_R .field 0x400FE608,32
+GPIO_PORTN_DIR_N .field 0x40064400,32
+GPIO_PORTN_DEN_N .field 0x4006451C,32
+GPIO_PORTN_DATA_N .field 0x4006400C,32
+
+GPIO_PORTJ_DIR_J .field 0x40060400,32
+GPIO_PORTJ_DEN_J .field 0x4006051C,32
+GPIO_PORTJ_PUR_J .field 0x40060510,32
+GPIO_PORTJ_DATA_J .field 0x400603FC,32
+
+LEDS_ON .EQU 0x03
+LEDS_OFF .EQU 0x00
+
+main
+    ; Habilitar reloj para puertos N y J
+    LDR R1, SYSCTL_RCGCGPIO_R
+    LDR R0, [R1]
+    ORR R0, R0, #0x1100
+    STR R0, [R1]
+    NOP
+    NOP
+
+    ; Configurar Puerto N como salida digital
+    LDR R1, GPIO_PORTN_DIR_N
+    MOV R0, #0xFF
+    STR R0, [R1]
+
+    LDR R1, GPIO_PORTN_DEN_N
+    MOV R0, #0xFF
+    STR R0, [R1]
+
+    ; Configurar Puerto J como entrada con pull-up
+    LDR R1, GPIO_PORTJ_DIR_J
+    MOV R0, #0x00
+    STR R0, [R1]
+
+    LDR R1, GPIO_PORTJ_DEN_J
+    MOV R0, #0x03
+    STR R0, [R1]
+
+    LDR R1, GPIO_PORTJ_PUR_J
+    MOV R0, #0x03
+    STR R0, [R1]
+
+configuracion
+    MOV R4, #0      ; Contador de tiempo en segundos
+
+esperar_SW1
+    LDR R1, GPIO_PORTJ_DATA_J
+    LDR R0, [R1]
+    TST R0, #0x01   ; ¿SW1 presionado? (PJ0 = 0)
+    BNE verificar_SW2
+
+    ADD R4, R4, #1  ; Incrementa el tiempo
+    CMP R4, #8
+    BGT configuracion ; Reinicia si excede 8 segundos
+
+esperar_SW1_liberado
+    LDR R1, GPIO_PORTJ_DATA_J
+    LDR R0, [R1]
+    TST R0, #0x01
+    BEQ esperar_SW1_liberado
+    B esperar_SW1
+
+verificar_SW2
+    LDR R1, GPIO_PORTJ_DATA_J
+    LDR R0, [R1]
+    TST R0, #0x02    ; ¿SW2 presionado? (PJ1 = 0)
+    BEQ parpadeo     ; Si presionado, ir a parpadeo
+    B esperar_SW1
+
+parpadeo
+    LDR R1, GPIO_PORTN_DATA_N
+    MOV R0, #LEDS_ON
+    STR R0, [R1]   ; Enciende LEDs
+
+    MOV R5, R4     ; Carga el tiempo en segundos
+    BL delay       ; Llamar función de retardo
+
+    MOV R0, #LEDS_OFF
+    STR R0, [R1]   ; Apaga LEDs
+
+    MOV R5, R4     ; Carga el tiempo en segundos
+    BL delay       ; Llamar función de retardo
+
+    ; Continuar parpadeando si no se presionó SW1
+    B parpadeo
+
+
+delay
+    CMP R5, #1
+    BEQ delay_1
+    CMP R5, #2
+    BEQ delay_2
+    CMP R5, #3
+    BEQ delay_3
+    CMP R5, #4
+    BEQ delay_4
+    CMP R5, #5
+    BEQ delay_5
+    CMP R5, #6
+    BEQ delay_6
+    CMP R5, #7
+    BEQ delay_7
+    CMP R5, #8
+    BEQ delay_8
+    BX LR
+
+delay_1 MOV R5, #0x4240
+    MOVT R5, #0x000F
+loop_1
+
+	LDR R3, GPIO_PORTJ_DATA_J
+    LDR R6, [R3]
+    TST R6, #0x01  ; ¿SW1 presionado? (PJ0 = 0)?
+    BEQ configuracion ; Si SW1 presionado, volver a configuración
+
+    SUBS R5, R5, #1
+    BNE loop_1
+    BX LR
+
+delay_2 MOV R5, #0xA120
+    MOVT R5, #0x0007
+loop_2
+
+	LDR R3, GPIO_PORTJ_DATA_J
+    LDR R6, [R3]
+    TST R6, #0x01  ; ¿SW1 presionado? (PJ0 = 0)?
+    BEQ configuracion ; Si SW1 presionado, volver a configuración
+
+    SUBS R5, R5, #1
+    BNE loop_2
+    BX LR
+
+delay_3 MOV R5, #0x8D80
+    MOVT R5, #0x005B
+loop_3
+
+	LDR R3, GPIO_PORTJ_DATA_J
+    LDR R6, [R3]
+    TST R6, #0x01  ; ¿SW1 presionado? (PJ0 = 0)?
+    BEQ configuracion ; Si SW1 presionado, volver a configuración
+
+    SUBS R5, R5, #1
+    BNE loop_3
+    BX LR
+
+delay_4 MOV R5, #0x1200
+    MOVT R5, #0x007A
+loop_4
+
+	LDR R3, GPIO_PORTJ_DATA_J
+    LDR R6, [R3]
+    TST R6, #0x01  ; ¿SW1 presionado? (PJ0 = 0)?
+    BEQ configuracion ; Si SW1 presionado, volver a configuración
+
+    SUBS R5, R5, #1
+    BNE loop_4
+    BX LR
+
+delay_5 MOV R5, #0xA680
+    MOVT R5, #0x0098
+loop_5
+
+	LDR R3, GPIO_PORTJ_DATA_J
+    LDR R6, [R3]
+    TST R6, #0x01  ; ¿SW1 presionado? (PJ0 = 0)?
+    BEQ configuracion ; Si SW1 presionado, volver a configuración
+
+    SUBS R5, R5, #1
+    BNE loop_5
+    BX LR
+
+delay_6 MOV R5, #0xB100
+    MOVT R5, #0x00B7
+loop_6
+
+	LDR R3, GPIO_PORTJ_DATA_J
+    LDR R6, [R3]
+    TST R6, #0x01  ; ¿SW1 presionado? (PJ0 = 0)?
+    BEQ configuracion ; Si SW1 presionado, volver a configuración
+
+    SUBS R5, R5, #1
+    BNE loop_6
+    BX LR
+
+delay_7 MOV R5, #0x9F80
+    MOVT R5, #0x00D5
+loop_7
+
+	LDR R3, GPIO_PORTJ_DATA_J
+    LDR R6, [R3]
+    TST R6, #0x01  ; ¿SW1 presionado? (PJ0 = 0)?
+    BEQ configuracion ; Si SW1 presionado, volver a configuración
+
+    SUBS R5, R5, #1
+    BNE loop_7
+    BX LR
+
+delay_8 MOV R5, #0xBC80
+    MOVT R5, #0x0122
+loop_8
+
+	LDR R3, GPIO_PORTJ_DATA_J
+    LDR R6, [R3]
+    TST R6, #0x01  ; ¿SW1 presionado? (PJ0 = 0)?
+    BEQ configuracion ; Si SW1 presionado, volver a configuración
+
+    SUBS R5, R5, #1
+    BNE loop_8
+    BX LR
+
+.end
