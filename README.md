@@ -1,3 +1,7 @@
+✍️ Autor
+JohnCD1906: 
+Estudiante e ingeniero interesado en sistemas embebidos y microcontroladores.
+
 # Códigos_Tiva
 
 Repositorio con ejemplos y proyectos para programar la tarjeta **Tiva TM4C1294NCPDT** usando **Code Composer Studio (CCS)**. Incluye ejemplos en C y en lenguaje ensamblador.
@@ -65,9 +69,6 @@ GitHub ha reemplazado las contraseñas por tokens para proteger mejor tu cuenta.
 -Asegúrate de tener TivaWare correctamente instalado y configurado si algún proyecto usa driverlib.
 -Revisa que tu tarjeta Tiva esté conectada por USB y que los drivers Stellaris ICDI estén instalados.
 
-✍️ Autor
-JohnCD1906
-Estudiante e ingeniero interesado en sistemas embebidos y microcontroladores.
 
 📃 Licencia
 Este proyecto es libre. Puedes copiar, modificar y usar con fines educativos.
